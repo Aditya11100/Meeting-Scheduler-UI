@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-native/no-inline-styles */
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,17 +9,30 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import {differenceFinder} from '../../helpers';
-import {Picker} from '@react-native-picker/picker';
-
+import DateTimePicker from '../DateTimePicker';
+import moment from 'moment';
 interface propsType {
   showModal: boolean;
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
   schedules: {title: string; fromTime: string; toTime: string}[];
+  setSchedules: React.Dispatch<
+    React.SetStateAction<{title: string; fromTime: string; toTime: string}[]>
+  >;
+  timings: string[][];
+  setTimings: React.Dispatch<React.SetStateAction<string[][]>>;
 }
 
-const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
+const ModalSheet = ({
+  showModal,
+  setShowModal,
+  schedules,
+  setSchedules,
+  timings,
+  setTimings,
+}: propsType) => {
   const [meetings, setMeetings] = useState({
     '09': null,
     '10': null,
@@ -33,6 +47,12 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
     '07': null,
     '08': null,
   });
+  const [showPickerFrom, setShowPickerFrom] = useState(false);
+  const [showPickerTo, setShowPickerTo] = useState(false);
+  const [fromTime, setFromTime] = useState('');
+  const [toTime, setToTime] = useState('');
+  const minTime = moment('09:00 AM', 'LT');
+  const maxTime = moment('08:00 PM', 'LT');
 
   const time = [
     '09 am',
@@ -61,6 +81,68 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
     });
     setMeetings(meet);
   }, [schedules]);
+
+  useEffect(() => {
+    if (fromTime && toTime) {
+      if (
+        minTime.isAfter(moment(fromTime, 'LT')) ||
+        maxTime.isBefore(moment(toTime, 'LT'))
+      ) {
+        Alert.alert('Reselect Time', 'Time should be between 9am to 8pm', [
+          {text: 'OK', onPress: () => console.log('OK Pressed')},
+        ]);
+        setFromTime('');
+        setToTime('');
+      }
+    }
+  }, [fromTime, toTime]);
+
+  const addtoSchedule = () => {
+    if (fromTime && toTime) {
+      const startTime = moment(fromTime, 'LT').format('LT');
+      const endTime = moment(toTime, 'LT').format('LT');
+      let canSchedule = true;
+      // eslint-disable-next-line no-lone-blocks
+      for (let i = 0; i < timings.length; i++) {
+        const [a, b] = timings[i];
+        const meetA = moment(a, 'LT').format('LT');
+        const meetb = moment(b, 'LT').format('LT');
+
+        // if (startTime < minTime || maxTime < endTime) {
+        //   Alert.alert('Reselect Time', 'Time should be between 9 AM to 8 Pm', [
+        //     {text: 'OK', onPress: () => console.log('OK Pressed')},
+        //   ]);
+        //   canSchedule = false;
+        //   return;
+        // }
+        if (
+          (startTime >= meetA &&
+            startTime <= meetb &&
+            endTime >= meetA &&
+            endTime <= meetb) ||
+          (startTime >= meetA && startTime <= meetb) ||
+          (endTime > meetA && endTime < meetb) ||
+          (startTime <= meetA && meetb <= endTime)
+        ) {
+          canSchedule = false;
+          break;
+        }
+      }
+      if (canSchedule) {
+        setSchedules([
+          ...schedules,
+          {title: 'new meet', fromTime: fromTime, toTime: toTime},
+        ]);
+        setTimings([...timings, [fromTime, toTime]]);
+        setFromTime('');
+        setToTime('');
+      } else {
+        Alert.alert('Reselect Time', 'Time should not Overlab any meeting', [
+          {text: 'OK', onPress: () => console.log('OK Pressed')},
+        ]);
+      }
+    }
+  };
 
   return (
     <Modal
@@ -130,24 +212,42 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
               <ScrollView
                 style={{marginTop: 34, marginLeft: 15, marginBottom: 34}}>
                 {time.map(item => {
-                  const difference = differenceFinder(
+                  // const difference = differenceFinder(
+                  //   meetings[item.substring(0, 2)]?.fromTime,
+                  //   meetings[item.substring(0, 2)]?.toTime,
+                  // );
+                  let from = moment(
                     meetings[item.substring(0, 2)]?.fromTime,
+                    'LT',
+                  ).format('LT');
+                  let to = moment(
                     meetings[item.substring(0, 2)]?.toTime,
+                    'LT',
+                  ).format('LT');
+                  let height = moment(to, 'LT').diff(
+                    moment(from, 'LT'),
+                    'minutes',
                   );
-                  let height =
-                    (parseInt(
-                      meetings[item.substring(0, 2)]?.toTime.substring(3, 5),
-                    ) /
-                      60) *
-                    100;
+                  let diff = Math.floor(height / 60);
+                  diff = diff * 100;
+                  height = height % 60;
+                  height = Math.floor((height / 60) * 100);
+                  diff = diff + height;
+                  // let height =
+                  //   (parseInt(
+                  //     meetings[item.substring(0, 2)]?.toTime.substring(3, 5),
+                  //   ) /
+                  //     60) *
+                  //   100;
                   let margintop =
                     (parseInt(
                       meetings[item.substring(0, 2)]?.fromTime.substring(3, 5),
                     ) /
                       60) *
                     100;
+                  margintop = margintop / 2;
                   // height === 0 ? (height = 100) : null;
-                  height = height + difference;
+                  // height = height + difference;
                   return (
                     <View style={{height: 60, flexDirection: 'row'}}>
                       <Text style={{color: '#B95D3B', width: 40, fontSize: 11}}>
@@ -167,7 +267,7 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
                           width: '100%',
                           marginTop: margintop || 0,
                           backgroundColor: '#F6F4E7',
-                          height: `${height}%` || 0,
+                          height: `${diff}%` || 0,
                         }}
                       />
                     </View>
@@ -183,7 +283,8 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
               alignItems: 'center',
               marginTop: 21,
             }}>
-            <View
+            <TouchableOpacity
+              onPress={() => setShowPickerFrom(true)}
               style={{
                 backgroundColor: '#E2E2E2',
                 width: 105,
@@ -193,11 +294,12 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
                 alignItems: 'center',
               }}>
               <Text style={{fontSize: 18, fontWeight: '700'}}>
-                {'11:15 AM'}
+                {fromTime || 'NA'}
               </Text>
-            </View>
+            </TouchableOpacity>
             <Text style={{marginHorizontal: 20}}>TO</Text>
-            <View
+            <TouchableOpacity
+              onPress={() => setShowPickerTo(true)}
               style={{
                 backgroundColor: '#E2E2E2',
                 width: 105,
@@ -207,12 +309,25 @@ const ModalSheet = ({showModal, setShowModal, schedules}: propsType) => {
                 alignItems: 'center',
               }}>
               <Text style={{fontSize: 18, fontWeight: '700'}}>
-                {'11:15 AM'}
+                {toTime || 'NA'}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
+          <DateTimePicker
+            showPicker={showPickerFrom}
+            setShowPicker={setShowPickerFrom}
+            time={fromTime}
+            setTime={setFromTime}
+          />
+          <DateTimePicker
+            showPicker={showPickerTo}
+            setShowPicker={setShowPickerTo}
+            time={toTime}
+            setTime={setToTime}
+          />
         </View>
         <TouchableOpacity
+          onPress={() => addtoSchedule()}
           style={{
             paddingVertical: 19,
             width: '92%',

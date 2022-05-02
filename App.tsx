@@ -1,5 +1,5 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, {useEffect, useState} from 'react';
+import React, {useState, useRef} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -8,15 +8,23 @@ import {
   View,
 } from 'react-native';
 import ModalSheet from './components/Modal';
+import OtpInput from './components/OTP';
+import FormElement, {KEYBOARD_TYPE} from './components/FormElements';
 
 const App = () => {
   const [showModal, setShowModal] = useState(false);
+  const fieldRef = useRef();
 
-  const schedules = [
-    {title: 'Meeting_1', fromTime: '09:00 am', toTime: '12:00 pm'},
-    {title: 'Meeting_2', fromTime: '02:00 pm', toTime: '02:20 pm'},
-    {title: 'Meeting_3', fromTime: '03:15 pm', toTime: '03:30 pm'},
-  ];
+  const [schedules, setSchedules] = useState([
+    {title: 'Meeting_1', fromTime: '09:00 AM', toTime: '09:40 AM'},
+    {title: 'Meeting_2', fromTime: '02:00 PM', toTime: '02:20 PM'},
+    {title: 'Meeting_3', fromTime: '03:15 PM', toTime: '03:30 PM'},
+  ]);
+  const [timings, setTimings] = useState([
+    ['09:00 AM', '09:40 AM'],
+    ['02:00 PM', '02:20 PM'],
+    ['03:15 PM', '03:30 PM'],
+  ]);
 
   return (
     <SafeAreaView style={{flex: 1}}>
@@ -39,6 +47,9 @@ const App = () => {
           showModal={showModal}
           setShowModal={setShowModal}
           schedules={schedules}
+          setSchedules={setSchedules}
+          timings={timings}
+          setTimings={setTimings}
         />
       </View>
     </SafeAreaView>
